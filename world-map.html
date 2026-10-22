@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Interactive World Map | Documents Without Borders Global</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+:root{--dark:#0A0F2C;--purple:#7C3AED;--amber:#F59E0B}
+*{margin:0;padding:0;box-sizing:border-box;font-family:Inter,system-ui,sans-serif}
+body{background:#F8FAFC}
+header{background:var(--dark)}
+.header-logo{max-width:1400px;margin:0 auto} .header-logo img{width:100%;display:block}
+.nav{max-width:1400px;margin:0 auto;display:flex;justify-content:space-between;padding:10px 24px;color:#94A3B8;font-size:.8rem} .nav a{color:#94A3B8;text-decoration:none}
+#map{width:100%;height:72vh;border-bottom:4px solid #0A0F2C}
+.controls{max-width:1400px;margin:0 auto;padding:14px 24px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;background:white;border-bottom:1px solid #E2E8F0}
+.btn{padding:10px 16px;border-radius:999px;font-weight:800;font-size:.85rem;border:2px solid;cursor:pointer}
+.btn-green{background:#DCFCE7;color:#166534;border-color:#22C55E} .btn-blue{background:#DBEAFE;color:#1E40AF;border-color:#3B82F6} .btn-gold{background:#FEF3C7;color:#92400E;border-color:#F59E0B} .btn-all{background:#0A0F2C;color:white;border-color:#0A0F2C}
+.search{flex:1;min-width:220px;padding:12px 16px;border:2px solid #7C3AED;border-radius:999px;outline:none}
+.legend{display:flex;gap:12px;flex-wrap:wrap;padding:8px 24px;max-width:1400px;margin:0 auto;font-size:.8rem;color:#475569}
+.dot{width:12px;height:12px;border-radius:50%;display:inline-block;margin-right:6px}
+.leaflet-popup-content{font-size:.9rem;line-height:1.5}
+.popup-flag{font-size:1.5rem}
+</style>
+</head>
+<body>
+<header>
+<div class="header-logo"><img src="./DWB_ORIGINAL_CORRECTED_DARK.png" alt="Documents Without Borders Global"></div>
+<div class="nav"><span>CEO & Chief Notary Officer: Oswald Joseph Bien-Aimé | Home of Notarizationship™</span><span><a href="./index.html">Home</a> | <a href="./apostille-authentication-members.html">Members</a> | <a href="./other-countries-territories.html">Other Territories</a> | World Map</span></div>
+</header>
+
+<div class="controls">
+<input id="searchInput" class="search" placeholder="🔍 Search: St. Thomas, Tortola, India, Brazil, North Sentinel..." oninput="filterMap()">
+<button class="btn btn-all" onclick="showAll()">Show All</button>
+<button class="btn btn-green" onclick="filterBy('hague')">🟢 Green = Hague 130</button>
+<button class="btn btn-blue" onclick="filterBy('nonhague')">🔵 Blue = Non-Hague 65</button>
+<button class="btn btn-gold" onclick="filterBy('other')">🟡 Gold = Other + Off-Limits</button>
+<span id="count" style="font-weight:800;color:#0A0F2C"></span>
+</div>
+<div class="legend">
+<span><span class="dot" style="background:#22C55E"></span>Green = Hague Member (130) — Apostille</span>
+<span><span class="dot" style="background:#3B82F6"></span>Blue = Non-Hague Member — Consular Legalization</span>
+<span><span class="dot" style="background:#F59E0B"></span>Gold = Other Territories + Off-Limits (Neither Hague nor Non-Hague) + Islands breakdown</span>
+</div>
+
+<div id="map"></div>
+
+<div style="max-width:1400px;margin:0 auto;padding:20px 24px;background:white">
+<h3>What the colors mean for Documents Without Borders Global:</h3>
+<p style="color:#475569;font-size:.9rem;margin-top:6px">
+<b style="color:#16A34A">🟢 Green = Hague Member:</b> 130 countries as of June 30 2026. One Apostille. 1961 Convention.<br>
+<b style="color:#2563EB">🔵 Blue = Non-Hague:</b> 65 countries (195-130). Requires US Dept + Embassy Legalization. No Apostille.<br>
+<b style="color:#D97706">🟡 Gold = Other + Off-Limits:</b> Territories like Puerto Rico 🇵🇷 (uses US Apostille), BVI Tortola (uses UK), French Polynesia, plus protected islands like North Sentinel Island 🇮🇳 (illegal to visit, no civil registry). These are neither Hague nor Non-Hague — they use parent country's Apostille or no documents at all.
+</p>
+<p style="margin-top:10px;font-size:.8rem;color:#94A3B8">© Documents Without Borders Global | CEO & Chief Notary Officer Oswald Joseph Bien-Aimé | 195 = 193 UN Members + 2 Observers | Source: HCCH, UN</p>
+</div>
+
+<script>
+const hague = [["United States", "\ud83c\uddfa\ud83c\uddf8", 38.9, -98], ["United Kingdom", "\ud83c\uddec\ud83c\udde7", 55.3, -3.4], ["France", "\ud83c\uddeb\ud83c\uddf7", 46.2, 2.2], ["Germany", "\ud83c\udde9\ud83c\uddea", 51, 10], ["India", "\ud83c\uddee\ud83c\uddf3", 20.5, 78.9], ["China", "\ud83c\udde8\ud83c\uddf3", 35, 105], ["Australia", "\ud83c\udde6\ud83c\uddfa", -25, 133], ["Brazil", "\ud83c\udde7\ud83c\uddf7", -14, -51], ["Japan", "\ud83c\uddef\ud83c\uddf5", 36, 138], ["South Korea", "\ud83c\uddf0\ud83c\uddf7", 36, 128], ["Canada", "\ud83c\udde8\ud83c\udde6", 56, -106], ["Mexico", "\ud83c\uddf2\ud83c\uddfd", 23, -102], ["South Africa", "\ud83c\uddff\ud83c\udde6", -30, 25], ["Italy", "\ud83c\uddee\ud83c\uddf9", 41.8, 12.5], ["Spain", "\ud83c\uddea\ud83c\uddf8", 40.4, -3.7], ["Ukraine", "\ud83c\uddfa\ud83c\udde6", 48.3, 31], ["Argentina", "\ud83c\udde6\ud83c\uddf7", -38, -63], ["Colombia", "\ud83c\udde8\ud83c\uddf4", 4, -72], ["Peru", "\ud83c\uddf5\ud83c\uddea", -9, -75], ["Morocco", "\ud83c\uddf2\ud83c\udde6", 31.7, -7], ["Saudi Arabia", "\ud83c\uddf8\ud83c\udde6", 23.8, 45], ["Bahrain", "\ud83c\udde7\ud83c\udded", 26, 50.5], ["Oman", "\ud83c\uddf4\ud83c\uddf2", 21, 57], ["Panama", "\ud83c\uddf5\ud83c\udde6", 8.5, -80], ["Dominican Republic", "\ud83c\udde9\ud83c\uddf4", 18.7, -70], ["Philippines", "\ud83c\uddf5\ud83c\udded", 13, 122], ["New Zealand", "\ud83c\uddf3\ud83c\uddff", -40, 174], ["Israel", "\ud83c\uddee\ud83c\uddf1", 31, 35], ["Turkey", "\ud83c\uddf9\ud83c\uddf7", 39, 35], ["Portugal", "\ud83c\uddf5\ud83c\uddf9", 39.3, -8], ["Greece", "\ud83c\uddec\ud83c\uddf7", 39, 22], ["Netherlands", "\ud83c\uddf3\ud83c\uddf1", 52.1, 5.2], ["Belgium", "\ud83c\udde7\ud83c\uddea", 50.8, 4.3], ["Sweden", "\ud83c\uddf8\ud83c\uddea", 60, 18], ["Norway", "\ud83c\uddf3\ud83c\uddf4", 60.4, 8.4], ["Denmark", "\ud83c\udde9\ud83c\uddf0", 56, 10], ["Finland", "\ud83c\uddeb\ud83c\uddee", 61.9, 25.7], ["Poland", "\ud83c\uddf5\ud83c\uddf1", 51.9, 19.1], ["Czech Republic", "\ud83c\udde8\ud83c\uddff", 49.8, 15.4], ["Hungary", "\ud83c\udded\ud83c\uddfa", 47.1, 19.5], ["Switzerland", "\ud83c\udde8\ud83c\udded", 46.8, 8.2], ["Austria", "\ud83c\udde6\ud83c\uddf9", 47.5, 14.5], ["Ireland", "\ud83c\uddee\ud83c\uddea", 53, -8], ["Iceland", "\ud83c\uddee\ud83c\uddf8", 64.9, -19], ["Albania", "\ud83c\udde6\ud83c\uddf1", 41, 20], ["Armenia", "\ud83c\udde6\ud83c\uddf2", 40, 45], ["Azerbaijan", "\ud83c\udde6\ud83c\uddff", 40.1, 47.6], ["Belarus", "\ud83c\udde7\ud83c\uddfe", 53.7, 28], ["Bosnia and Herzegovina", "\ud83c\udde7\ud83c\udde6", 43.9, 17.6], ["Bulgaria", "\ud83c\udde7\ud83c\uddec", 42.7, 25.4], ["Croatia", "\ud83c\udded\ud83c\uddf7", 45.1, 15.2], ["Cyprus", "\ud83c\udde8\ud83c\uddfe", 35, 33], ["Estonia", "\ud83c\uddea\ud83c\uddea", 58.5, 25], ["Georgia", "\ud83c\uddec\ud83c\uddea", 42.3, 43.3], ["Kazakhstan", "\ud83c\uddf0\ud83c\uddff", 48, 68], ["Kyrgyzstan", "\ud83c\uddf0\ud83c\uddec", 41, 74.7], ["Latvia", "\ud83c\uddf1\ud83c\uddfb", 56.8, 24.6], ["Lithuania", "\ud83c\uddf1\ud83c\uddf9", 55.1, 23.8], ["Malta", "\ud83c\uddf2\ud83c\uddf9", 35.9, 14.3], ["Moldova", "\ud83c\uddf2\ud83c\udde9", 47, 28.8], ["Monaco", "\ud83c\uddf2\ud83c\udde8", 43.7, 7.4], ["Montenegro", "\ud83c\uddf2\ud83c\uddea", 42.7, 19.3], ["North Macedonia", "\ud83c\uddf2\ud83c\uddf0", 41.6, 21.7], ["Romania", "\ud83c\uddf7\ud83c\uddf4", 45.9, 24.9], ["Russia", "\ud83c\uddf7\ud83c\uddfa", 61, 105], ["Serbia", "\ud83c\uddf7\ud83c\uddf8", 44, 21], ["Slovakia", "\ud83c\uddf8\ud83c\uddf0", 48.6, 19.7], ["Slovenia", "\ud83c\uddf8\ud83c\uddee", 46.1, 14.9], ["Kosovo", "\ud83c\uddfd\ud83c\uddf0", 42.6, 20.9], ["Andorra", "\ud83c\udde6\ud83c\udde9", 42.5, 1.5], ["Liechtenstein", "\ud83c\uddf1\ud83c\uddee", 47.1, 9.5], ["Luxembourg", "\ud83c\uddf1\ud83c\uddfa", 49.8, 6.1], ["San Marino", "\ud83c\uddf8\ud83c\uddf2", 43.9, 12.4], ["Vatican? no", "\ud83c\uddfb\ud83c\udde6", 0, 0], ["Chile", "\ud83c\udde8\ud83c\uddf1", -35, -71], ["Ecuador", "\ud83c\uddea\ud83c\udde8", -1.8, -78], ["Bolivia", "\ud83c\udde7\ud83c\uddf4", -16.2, -63.5], ["Paraguay", "\ud83c\uddf5\ud83c\uddfe", -23, -58], ["Uruguay", "\ud83c\uddfa\ud83c\uddfe", -32.5, -55.7], ["Venezuela", "\ud83c\uddfb\ud83c\uddea", 6.4, -66.8], ["Costa Rica", "\ud83c\udde8\ud83c\uddf7", 9.7, -84], ["El Salvador", "\ud83c\uddf8\ud83c\uddfb", 13.7, -88.7], ["Guatemala", "\ud83c\uddec\ud83c\uddf9", 15.7, -90.2], ["Honduras", "\ud83c\udded\ud83c\uddf3", 15, -86.2], ["Nicaragua", "\ud83c\uddf3\ud83c\uddee", 12.8, -85], ["Belize", "\ud83c\udde7\ud83c\uddff", 17.1, -88.4], ["Antigua and Barbuda", "\ud83c\udde6\ud83c\uddec", 17, -61.8], ["Bahamas", "\ud83c\udde7\ud83c\uddf8", 25, -77.3], ["Barbados", "\ud83c\udde7\ud83c\udde7", 13.1, -59.6], ["Dominica", "\ud83c\udde9\ud83c\uddf2", 15.4, -61.3], ["Grenada", "\ud83c\uddec\ud83c\udde9", 12.1, -61.6], ["Jamaica", "\ud83c\uddef\ud83c\uddf2", 18.1, -77.2], ["Saint Kitts and Nevis", "\ud83c\uddf0\ud83c\uddf3", 17.3, -62.7], ["Saint Lucia", "\ud83c\uddf1\ud83c\udde8", 13.9, -60.9], ["Saint Vincent and the Grenadines", "\ud83c\uddfb\ud83c\udde8", 13.2, -61.1], ["Trinidad and Tobago", "\ud83c\uddf9\ud83c\uddf9", 10.6, -61], ["Suriname", "\ud83c\uddf8\ud83c\uddf7", 3.9, -56], ["Guyana", "\ud83c\uddec\ud83c\uddfe", 4.8, -58.9], ["Algeria", "\ud83c\udde9\ud83c\uddff", 28, 3], ["Botswana", "\ud83c\udde7\ud83c\uddfc", -22, 24], ["Brunei", "\ud83c\udde7\ud83c\uddf3", 4.5, 114.7], ["Burkina Faso", "\ud83c\udde7\ud83c\uddeb", 12.2, -1.5], ["Cape Verde", "\ud83c\udde8\ud83c\uddfb", 16, -24], ["Cook Islands", "\ud83c\udde8\ud83c\uddf0", -21.2, -159.7], ["Eswatini", "\ud83c\uddf8\ud83c\uddff", -26.5, 31.5], ["Fiji", "\ud83c\uddeb\ud83c\uddef", -17.7, 178], ["Lesotho", "\ud83c\uddf1\ud83c\uddf8", -29.6, 28.2], ["Liberia", "\ud83c\uddf1\ud83c\uddf7", 6.4, -9.5], ["Malawi", "\ud83c\uddf2\ud83c\uddfc", -13.2, 34], ["Marshall Islands", "\ud83c\uddf2\ud83c\udded", 7.1, 171.1], ["Mauritius", "\ud83c\uddf2\ud83c\uddfa", -20.3, 57.5], ["Mongolia", "\ud83c\uddf2\ud83c\uddf3", 46.8, 103.8], ["Namibia", "\ud83c\uddf3\ud83c\udde6", -22, 17], ["Niue", "\ud83c\uddf3\ud83c\uddfa", -19, -169.8], ["Palau", "\ud83c\uddf5\ud83c\uddfc", 7.5, 134.5], ["Samoa", "\ud83c\uddfc\ud83c\uddf8", -13.7, -172], ["Sao Tome and Principe", "\ud83c\uddf8\ud83c\uddf9", 0.18, 6.6], ["Seychelles", "\ud83c\uddf8\ud83c\udde8", -4.6, 55.4], ["Tonga", "\ud83c\uddf9\ud83c\uddf4", -21.1, -175.2], ["Vanuatu", "\ud83c\uddfb\ud83c\uddfa", -15.3, 166.9]];
+const nonhague = [["Afghanistan", "\ud83c\udde6\ud83c\uddeb", 33, 65], ["Algeria (non?)", "\ud83c\udde9\ud83c\uddff", 28, 3], ["Angola", "\ud83c\udde6\ud83c\uddf4", -11, 17], ["Bangladesh", "\ud83c\udde7\ud83c\udde9", 23.6, 90.3], ["Benin", "\ud83c\udde7\ud83c\uddef", 9.3, 2.3], ["Bhutan", "\ud83c\udde7\ud83c\uddf9", 27.5, 90.4], ["Burkina?", "\ud83c\udde7\ud83c\uddeb", 12, -1], ["Cambodia", "\ud83c\uddf0\ud83c\udded", 12.5, 104.9], ["Cameroon", "\ud83c\udde8\ud83c\uddf2", 7.3, 12.3], ["Central African Republic", "\ud83c\udde8\ud83c\uddeb", 6.9, 20.9], ["Chad", "\ud83c\uddf9\ud83c\udde9", 15.4, 18.7], ["Comoros", "\ud83c\uddf0\ud83c\uddf2", -11.6, 43.3], ["Congo Republic", "\ud83c\udde8\ud83c\uddec", -0.2, 15.8], ["Congo DR", "\ud83c\udde8\ud83c\udde9", -4, 21.7], ["Cuba", "\ud83c\udde8\ud83c\uddfa", 21.5, -80], ["Djibouti", "\ud83c\udde9\ud83c\uddef", 11.8, 42.5], ["Egypt", "\ud83c\uddea\ud83c\uddec", 26.8, 30.8], ["Equatorial Guinea", "\ud83c\uddec\ud83c\uddf6", 1.6, 10.2], ["Eritrea", "\ud83c\uddea\ud83c\uddf7", 15.1, 39], ["Ethiopia", "\ud83c\uddea\ud83c\uddf9", 9.1, 40.4], ["Gabon", "\ud83c\uddec\ud83c\udde6", -0.8, 11.6], ["Gambia", "\ud83c\uddec\ud83c\uddf2", 13.4, -15.3], ["Ghana", "\ud83c\uddec\ud83c\udded", 7.9, -1], ["Guinea", "\ud83c\uddec\ud83c\uddf3", 9.9, -9.9], ["Guinea-Bissau", "\ud83c\uddec\ud83c\uddfc", 11.8, -15], ["Haiti", "\ud83c\udded\ud83c\uddf9", 18.9, -72.3], ["Iran", "\ud83c\uddee\ud83c\uddf7", 32.4, 53.6], ["Iraq", "\ud83c\uddee\ud83c\uddf6", 33.2, 43.6], ["Ivory Coast", "\ud83c\udde8\ud83c\uddee", 7.5, -5.5], ["Jordan", "\ud83c\uddef\ud83c\uddf4", 30.5, 36.2], ["Kenya", "\ud83c\uddf0\ud83c\uddea", -0.02, 37.9], ["Kuwait", "\ud83c\uddf0\ud83c\uddfc", 29.3, 47.4], ["Laos", "\ud83c\uddf1\ud83c\udde6", 19.8, 102.5], ["Lebanon", "\ud83c\uddf1\ud83c\udde7", 33.8, 35.8], ["Libya", "\ud83c\uddf1\ud83c\uddfe", 26.3, 17.2], ["Madagascar", "\ud83c\uddf2\ud83c\uddec", -18.7, 47], ["Mali", "\ud83c\uddf2\ud83c\uddf1", 17.5, -4], ["Mauritania", "\ud83c\uddf2\ud83c\uddf7", 21, -10.9], ["Mozambique", "\ud83c\uddf2\ud83c\uddff", -18.6, 35.5], ["Myanmar", "\ud83c\uddf2\ud83c\uddf2", 21.9, 95.9], ["Nepal", "\ud83c\uddf3\ud83c\uddf5", 28.3, 84.1], ["Niger", "\ud83c\uddf3\ud83c\uddea", 17.6, 8], ["Nigeria", "\ud83c\uddf3\ud83c\uddec", 9.08, 8.6], ["North Korea", "\ud83c\uddf0\ud83c\uddf5", 40, 127], ["Pakistan", "\ud83c\uddf5\ud83c\uddf0", 30.3, 69.3], ["Qatar", "\ud83c\uddf6\ud83c\udde6", 25.3, 51.1], ["Rwanda", "\ud83c\uddf7\ud83c\uddfc", -1.9, 29.8], ["Senegal", "\ud83c\uddf8\ud83c\uddf3", 14.4, -14.4], ["Sierra Leone", "\ud83c\uddf8\ud83c\uddf1", 8.4, -11.7], ["Somalia", "\ud83c\uddf8\ud83c\uddf4", 5.1, 46], ["Sri Lanka", "\ud83c\uddf1\ud83c\uddf0", 7.8, 80.7], ["Sudan", "\ud83c\uddf8\ud83c\udde9", 12.8, 30.2], ["Syria", "\ud83c\uddf8\ud83c\uddfe", 34.8, 38.9], ["Tanzania", "\ud83c\uddf9\ud83c\uddff", -6.3, 34.8], ["Thailand", "\ud83c\uddf9\ud83c\udded", 15.8, 100.9], ["Togo", "\ud83c\uddf9\ud83c\uddec", 8.6, 0.8], ["Turkmenistan", "\ud83c\uddf9\ud83c\uddf2", 38.9, 59.5], ["Uganda", "\ud83c\uddfa\ud83c\uddec", 1.3, 32.2], ["United Arab Emirates", "\ud83c\udde6\ud83c\uddea", 23.4, 53.8], ["Yemen", "\ud83c\uddfe\ud83c\uddea", 15.5, 48.5], ["Zambia", "\ud83c\uddff\ud83c\uddf2", -13.1, 27.8], ["Zimbabwe", "\ud83c\uddff\ud83c\uddfc", -19, 29.8], ["Vatican", "\ud83c\uddfb\ud83c\udde6", 41.9, 12.4], ["Palestine", "\ud83c\uddf5\ud83c\uddf8", 31.9, 35.2], ["Timor-Leste", "\ud83c\uddf9\ud83c\uddf1", -8.8, 125.7]];
+const other = [["Puerto Rico", "\ud83c\uddf5\ud83c\uddf7", 18.2, -66.5], ["Guam", "\ud83c\uddec\ud83c\uddfa", 13.4, 144.7], ["US Virgin Islands - St. Thomas", "\ud83c\uddfb\ud83c\uddee", 18.34, -64.93], ["US Virgin Islands - St. Croix", "\ud83c\uddfb\ud83c\uddee", 17.72, -64.74], ["US Virgin Islands - St. John", "\ud83c\uddfb\ud83c\uddee", 18.33, -64.73], ["British Virgin Islands - Tortola", "\ud83c\uddfb\ud83c\uddec", 18.42, -64.62], ["British Virgin Islands - Virgin Gorda", "\ud83c\uddfb\ud83c\uddec", 18.48, -64.39], ["British Virgin Islands - Anegada", "\ud83c\uddfb\ud83c\uddec", 18.72, -64.32], ["British Virgin Islands - Jost Van Dyke", "\ud83c\uddfb\ud83c\uddec", 18.3, -64.74], ["Hong Kong", "\ud83c\udded\ud83c\uddf0", 22.3, 114.1], ["Macau", "\ud83c\uddf2\ud83c\uddf4", 22.1, 113.5], ["Bermuda", "\ud83c\udde7\ud83c\uddf2", 32.3, -64.7], ["Cayman Islands - Grand Cayman", "\ud83c\uddf0\ud83c\uddfe", 19.3, -81.2], ["Greenland", "\ud83c\uddec\ud83c\uddf1", 71.7, -42.6], ["Faroe Islands", "\ud83c\uddeb\ud83c\uddf4", 61.9, -6.9], ["Aruba", "\ud83c\udde6\ud83c\uddfc", 12.5, -69.9], ["Cura\u00e7ao", "\ud83c\udde8\ud83c\uddfc", 12.1, -68.9], ["Sint Maarten", "\ud83c\uddf8\ud83c\uddfd", 18.04, -63.06], ["Bonaire", "\ud83c\udde7\ud83c\uddf6", 12.2, -68.2], ["Saba", "", 17.63, -63.23], ["Sint Eustatius", "", 17.48, -62.95], ["French Polynesia - Tahiti", "\ud83c\uddf5\ud83c\uddeb", -17.6, -149.5], ["New Caledonia", "\ud83c\uddf3\ud83c\udde8", -20.9, 165.6], ["Guadeloupe", "\ud83c\uddec\ud83c\uddf5", 16.2, -61.5], ["Martinique", "\ud83c\uddf2\ud83c\uddf6", 14.6, -61], ["R\u00e9union", "\ud83c\uddf7\ud83c\uddea", -21.1, 55.5], ["Mayotte", "\ud83c\uddfe\ud83c\uddf9", -12.8, 45.1], ["North Sentinel Island", "\ud83c\uddee\ud83c\uddf3", 11.56, 92.23], ["Snake Island Brazil", "\ud83c\udde7\ud83c\uddf7", -26.24, -48.36], ["Surtsey Iceland", "\ud83c\uddee\ud83c\uddf8", 63.3, -20.6], ["Bouvet Island", "\ud83c\udde7\ud83c\uddfb", -54.42, 3.35], ["Heard Island", "\ud83c\udded\ud83c\uddf2", -53.1, 73.5], ["Taiwan", "\ud83c\uddf9\ud83c\uddfc", 23.7, 120.9], ["Kosovo", "\ud83c\uddfd\ud83c\uddf0", 42.6, 20.9], ["Western Sahara", "\ud83c\uddea\ud83c\udded", 24.2, -12.8], ["Northern Cyprus", "", 35.1, 33.3], ["Somaliland", "", 9.5, 46.8]];
+
+const map = L.map('map').setView([20,0], 2);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:18, attribution:'© OpenStreetMap'}).addTo(map);
+
+let markers = [];
+
+function makeMarker(country,flag,lat,lng,type,label){
+  const color = type==='hague' ? '#22C55E' : type==='nonhague' ? '#3B82F6' : '#F59E0B';
+  const border = type==='other' ? '2px solid #92400E' : '2px solid white';
+  const icon = L.divIcon({
+    className:'custom-dot',
+    html:`<div style="width:14px;height:14px;background:${color};border:${border};border-radius:50%;box-shadow:0 0 6px rgba(0,0,0,.4)"></div>`,
+    iconSize:[14,14]
+  });
+  const m = L.marker([lat,lng], {icon}).addTo(map);
+  const statusText = type==='hague' ? '✅ Hague Member — Apostille (Green)' : type==='nonhague' ? '🔵 Non-Hague — Consular Legalization (Blue)' : '🟡 Other Territory / Off-Limits — Neither Hague nor Non-Hague (Gold)';
+  const apostilleText = type==='hague' ? 'Apostille via Competent Authority' : type==='nonhague' ? 'US Dept + Embassy Legalization' : label.includes('Virgin') || label.includes('Puerto') ? 'Uses parent country Apostille (e.g., USVI → US Apostille)' : label.includes('Sentinel') ? 'NO CIVIL REGISTRY — No documents exist' : 'Uses parent country or no registry';
+  m.bindPopup(`<div style="min-width:200px"><div class="popup-flag">${flag} ${country}</div><b>${label}</b><br>${statusText}<br><span style="font-size:.8rem;color:#475569">${apostilleText}</span><br><span style="font-size:.75rem;color:#94A3B8">Lat ${lat.toFixed(2)} Lng ${lng.toFixed(2)}</span></div>`);
+  m._type = type;
+  m._search = (country+' '+label+' '+flag).toLowerCase();
+  markers.push(m);
+  return m;
+}
+
+hague.forEach(([name,flag,lat,lng])=>{ if(lat!==0) makeMarker(name,flag,lat,lng,'hague', name); });
+nonhague.forEach(([name,flag,lat,lng])=> makeMarker(name,flag,lat,lng,'nonhague', name));
+other.forEach(([name,flag,lat,lng])=> makeMarker(name,flag,lat,lng,'other', name));
+
+function filterBy(type){
+  markers.forEach(m=>{ if(type==='all' || m._type===type) { if(!map.hasLayer(m)) m.addTo(map); } else { if(map.hasLayer(m)) map.removeLayer(m); } });
+  document.getElementById('count').innerText = markers.filter(m=> map.hasLayer(m)).length + ' dots visible — ' + type;
+}
+
+function showAll(){
+  markers.forEach(m=> { if(!map.hasLayer(m)) m.addTo(map); });
+  document.getElementById('count').innerText = markers.length + ' dots — All 195 + territories + off-limits';
+}
+
+function filterMap(){
+  const q = document.getElementById('searchInput').value.toLowerCase().trim();
+  if(!q){ showAll(); return; }
+  markers.forEach(m=>{
+    if(m._search.includes(q)) { if(!map.hasLayer(m)) m.addTo(map); }
+    else { if(map.hasLayer(m)) map.removeLayer(m); }
+  });
+  const visible = markers.filter(m=> map.hasLayer(m));
+  document.getElementById('count').innerText = visible.length + ' results for "'+q+'"';
+  if(visible.length>0){
+    const group = new L.featureGroup(visible);
+    map.fitBounds(group.getBounds().pad(0.3));
+  }
+}
+
+showAll();
+
+// Auto-focus example
+setTimeout(()=>{ filterMap(); },500);
+</script>
+</body>
+</html>
