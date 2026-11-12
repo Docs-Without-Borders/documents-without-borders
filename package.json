@@ -1,0 +1,11 @@
+{
+  "name": "documentswithoutborders-website",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Documents Without Borders - Website with auto-generated RSS feed",
+  "scripts": {
+    "generate-rss": "node generate-rss.js",
+    "build": "node generate-rss.js",
+    "dev": "node generate-rss.js && npx serve ."
+  }
+}
